@@ -39,7 +39,7 @@ conky.config = {
     background = false,
     update_interval = 1,
 
-    -- Lua-скрипт: kernel output transform (cachyos -> arch1-1)
+    -- Lua-scrypt: kernel output transform (cachyos -> arch1-1)
     lua_load = '/home/topsh/.config/conky/kernel.lua',
 }
 
