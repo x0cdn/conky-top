@@ -49,5 +49,9 @@ ${image /home/topsh/.config/conky/img/arch.png -p 2,1 -s 16x16}${goto 22}${voffs
 ]]
 ```
 
-Archive with icons/fonts/scrypts
-[Archive.tar.gz](https://github.com/user-attachments/files/32047935/Archive.tar.gz)
+
+
+
+Archive with icons/imgs/scrypts
+[Archive.tar.gz](https://github.com/user-attachments/files/32159270/Archive.tar.gz)
+
