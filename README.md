@@ -70,7 +70,7 @@ main-config column:
 | Column | Position | Content |
 | --- | --- | --- |
 | 1-3 | 32, 90, 250 | Reserved (blue dot placeholders). |
-| 4 | 340 | Top 20 CPU processes (`cpu_procs.sh`): blue names (`2092d0`), green percentages (`00FF00`) right-aligned at the column edge. Column widths are identical to `topbar.conf` (the +10 px margin is applied to both ends of every column). |
+| 4 | 350 | Top 20 CPU processes (`cpu_procs.sh`): blue names (`2092d0`), green percentages (`00FF00`) right-aligned at x=523. This column has a 20 px left indent and its right edge is 30 px left of the `topbar.conf` boundary; all other columns keep the shared +10 px margin. |
 | 5 | 555 | Reserved. |
 | 6 | 760 | Top 30 memory processes (`mem_procs.sh`). |
 | 7-9 | 925, 1020, 1140 | Reserved. |
