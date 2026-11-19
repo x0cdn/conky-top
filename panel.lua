@@ -21,6 +21,16 @@ function conky_cpu(n)
   return read_line('cpu_procs.state', n)
 end
 
+-- cpu_procs.state lines are "name padded to 16 chars + space + value".
+-- Returning the fields separately lets Conky color and align them independently.
+function conky_cpu_name(n)
+  return string.sub(read_line('cpu_procs.state', n), 1, 16)
+end
+
+function conky_cpu_val(n)
+  return string.sub(read_line('cpu_procs.state', n), 18)
+end
+
 function conky_mem(n)
   return read_line('mem_procs.state', n)
 end
