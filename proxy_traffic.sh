@@ -1,12 +1,10 @@
 #!/bin/bash
-# Total traffic (down/up, bytes) of the active NekoBox profile via the Clash API.
-# Accumulated between core restarts and PC reboots.
-# RESET: on the 9th day of every month the counter starts over (new period).
-# Clash API: Settings -> Advanced -> Clash API,
-#   External Controller: 127.0.0.1:9090, Secret: neko (change it here if needed).
-PORT=9090
-TOKEN=neko
-STATE="$HOME/.config/conky/proxy_traffic.state"
+# Total proxy traffic (down/up, bytes) for the whole period, from Throne's
+# Traffic Statistics database. Old data lives in the hourly table, recent data
+# in the minute table; both are combined without overlap.
+# RESET: on the 12th day of every month the counter starts over (new period).
+set -u
+DB="${THRONE_STATS_DB:-/home/topsh/AppImage/Throne/config/throne_stats.db}"
 
 fmt() {
   awk -v b="$1" 'BEGIN{
@@ -16,46 +14,33 @@ fmt() {
   }'
 }
 
-# Reset period: starting on the 9th of each month the counter starts over
+# Reset period: starting on the 12th of each month the counter starts over.
 day=$((10#$(date +%d)))
-if [ "$day" -ge 9 ]; then
+if [ "$day" -ge 12 ]; then
   period=$(date +%Y-%m)
 else
   period=$(date -d "last month" +%Y-%m)
 fi
+start=$(date -d "${period}-12 00:00:00" +%s)
 
-cur=$(curl -sN --max-time 2 -H "Accept: text/event-stream" \
-      -H "Authorization: Bearer ${TOKEN}" \
-      "http://127.0.0.1:${PORT}/traffic" 2>/dev/null | grep -m1 -oE '\{[^}]*\}')
+# The minute table only keeps recent days; older buckets are in the hourly
+# table. Use hourly data only before the first available minute bucket.
+first_minute=$(sqlite3 "$DB" "SELECT min(bucket_start) FROM config_traffic_minute;" 2>/dev/null)
+[ -n "$first_minute" ] || first_minute=9999999999
 
-if [ -z "$cur" ]; then
-  if [ -f "$STATE" ]; then
-    read -r sp pd pu ad au < "$STATE"
-    echo "↓$(fmt "${ad:-0}") ↑$(fmt "${au:-0}")"
-  else
-    echo "↓— ↑—"
-  fi
-  exit 0
-fi
+hour_row=$(sqlite3 "$DB" \
+  "SELECT sum(up), sum(down) FROM config_traffic_hour \
+   WHERE bucket_start >= ${start} AND bucket_start < ${first_minute};" 2>/dev/null)
+minute_row=$(sqlite3 "$DB" \
+  "SELECT sum(up), sum(down) FROM config_traffic_minute \
+   WHERE bucket_start >= ${start};" 2>/dev/null)
 
-cd=$(printf '%s' "$cur" | grep -ioE '"down"[[:space:]]*:[[:space:]]*[0-9]+' | grep -oE '[0-9]+')
-cu=$(printf '%s' "$cur" | grep -ioE '"up"[[:space:]]*:[[:space:]]*[0-9]+'   | grep -oE '[0-9]+')
-cd=${cd:-0}; cu=${cu:-0}
+hu=$(printf '%s' "$hour_row"   | cut -d'|' -f1)
+hd=$(printf '%s' "$hour_row"   | cut -d'|' -f2)
+mu=$(printf '%s' "$minute_row" | cut -d'|' -f1)
+md=$(printf '%s' "$minute_row" | cut -d'|' -f2)
 
-if [ -f "$STATE" ]; then
-  read -r sp pd pu ad au < "$STATE"
-  pd=${pd:-0}; pu=${pu:-0}; ad=${ad:-0}; au=${au:-0}
-  if [ "$sp" != "$period" ]; then
-    # new period reached (9th day) -> reset the accumulated totals
-    ad=0; au=0
-    pd=$cd; pu=$cu
-  else
-    if [ "$cd" -ge "$pd" ]; then ad=$((ad + cd - pd)); else ad=$((ad + cd)); fi
-    if [ "$cu" -ge "$pu" ]; then au=$((au + cu - pu)); else au=$((au + cu)); fi
-  fi
-else
-  ad=$cd; au=$cu
-fi
+up=$(( ${hu:-0} + ${mu:-0} ))
+down=$(( ${hd:-0} + ${md:-0} ))
 
-echo "$period $cd $cu $ad $au" > "$STATE"
-echo "↓$(fmt "$ad") ↑$(fmt "$au")"
+echo "↓$(fmt "$down") ↑$(fmt "$up")"
